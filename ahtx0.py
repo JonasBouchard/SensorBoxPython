@@ -1,7 +1,6 @@
 import utime
 from micropython import const
 
-
 class AHT10:
     """Interface library for AHT10/AHT20 temperature+humidity sensors"""
 

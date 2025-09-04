@@ -263,7 +263,7 @@ def main():
         # ----- PMS5003 -----
         pms = None
         try:
-            pms = PMS5003(port="/dev/ttyAMA0", baud=9600, pin_set=3, pin_reset=2, timeout=3.0)
+            pms = PMS5003(port="/dev/ttyAMA0", baud=9600, pin_set=3, pin_reset=2)
             sample = pms.read()
             print(f"PMS5003 ready. PM1={sample['pm1']} PM2.5={sample['pm25']} PM10={sample['pm10']} µg/m³")
         except Exception as e:

@@ -287,7 +287,11 @@ def main():
             t0 = time.time()
             while True:
                 # SGP30
-                eco2, tvoc = _read_words(bus, 0x2008, 2, delay_s=0.05)  # eCO2 ppm, TVOC ppb
+                eco2 = tvoc = None
+                try:
+                    eco2, tvoc = _read_words(bus, 0x2008, 2, delay_s=0.05)  # eCO2 ppm, TVOC ppb
+                except Exception as e:
+                    print(f"SGP30 read: {e}")
 
                 # AHT20
                 t_aht, rh = (None, None)
@@ -317,7 +321,9 @@ def main():
                 temp_c = t_bmp if t_bmp is not None else t_aht
 
                 uptime = time.time() - t0
-                line = [f"[{uptime:6.1f}s] eCO2={eco2:4d} ppm | TVOC={tvoc:4d} ppb"]
+                eco2_str = f"{eco2:4d}" if isinstance(eco2, int) else "   ?"
+                tvoc_str = f"{tvoc:4d}" if isinstance(tvoc, int) else "   ?"
+                line = [f"[{uptime:6.1f}s] eCO2={eco2_str} ppm | TVOC={tvoc_str} ppb"]
                 if temp_c is not None: line.append(f"T={temp_c:.2f}°C")
                 if rh is not None:     line.append(f"RH={rh:.1f}%")
                 if p_pa is not None:   line.append(f"P={p_pa/1000.0:.2f} kPa")

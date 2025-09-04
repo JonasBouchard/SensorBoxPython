@@ -11,6 +11,8 @@ overview of the environment without relying on the command line.
 import time
 import tkinter as tk
 import sys
+import json
+from pathlib import Path
 from smbus2 import SMBus
 
 # Reuse sensor utilities and classes from the existing SensorBox module
@@ -20,7 +22,6 @@ from SensorBox import (
     aht20_init,
     aht20_read,
     BMP280,
-    PMS5003,
     I2C_BUS,
 )
 
@@ -65,10 +66,8 @@ class Interface(tk.Tk):
         except Exception:
             self.bmp = None
 
-        try:
-            self.pms = PMS5003(port="/dev/ttyAMA0", baud=9600, pin_set=3, pin_reset=2)
-        except Exception:
-            self.pms = None
+        # Path to shared JSON data produced by SensorBox.py
+        self.data_file = Path(__file__).resolve().parent / "latest.json"
 
         self.after(1000, self.update_readings)
         self.protocol("WM_DELETE_WINDOW", self.on_close)
@@ -105,14 +104,15 @@ class Interface(tk.Tk):
         if p_pa is not None:
             self.labels["Pressure"].config(text=f"Pressure: {p_pa/1000:.1f} kPa")
 
-        # Particulate matter from PMS5003
-        pm1 = pm25 = pm10 = None
-        if self.pms:
-            try:
-                s = self.pms.read()
-                pm1, pm25, pm10 = s["pm1"], s["pm25"], s["pm10"]
-            except Exception:
-                pass
+        # Particulate matter from shared JSON file written by SensorBox.py
+        try:
+            with open(self.data_file, encoding="utf-8") as fh:
+                d = json.load(fh)
+            pm1 = d.get("PM1")
+            pm25 = d.get("PM2.5")
+            pm10 = d.get("PM10")
+        except Exception:
+            pm1 = pm25 = pm10 = None
         if pm1 is not None:
             self.labels["PM1"].config(text=f"PM1: {pm1} µg/m³")
         if pm25 is not None:

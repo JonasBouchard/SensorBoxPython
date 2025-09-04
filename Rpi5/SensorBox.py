@@ -5,6 +5,7 @@ import time
 import subprocess
 import sys
 from pathlib import Path
+import json
 
 from smbus2 import SMBus, i2c_msg
 
@@ -233,6 +234,7 @@ class PMS5003:
 # =======================
 def main():
     script_dir = Path(__file__).resolve().parent
+    data_file = script_dir / "latest.json"
     procs: list[subprocess.Popen] = []
     try:
         try:
@@ -321,6 +323,23 @@ def main():
                 if p_pa is not None:   line.append(f"P={p_pa/1000.0:.2f} kPa")
                 if pm25 is not None:   line.append(f"PM1={pm1} PM2.5={pm25} PM10={pm10} µg/m³")
                 print(" | ".join(line))
+
+                # Persist latest readings for other interfaces
+                try:
+                    payload = {
+                        "eCO2": eco2,
+                        "TVOC": tvoc,
+                        "Temp": temp_c,
+                        "RH": rh,
+                        "Pressure": p_pa,
+                        "PM1": pm1,
+                        "PM2.5": pm25,
+                        "PM10": pm10,
+                    }
+                    with open(data_file, "w", encoding="utf-8") as fh:
+                        json.dump(payload, fh)
+                except Exception:
+                    pass
 
                 time.sleep(1.0)
     finally:

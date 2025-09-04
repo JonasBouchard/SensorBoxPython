@@ -57,12 +57,6 @@ latest: dict[str, str] = {
     "PM1": "—",
     "PM2.5": "—",
     "PM10": "—",
-    "≥0.3 µm": "—",
-    "≥0.5 µm": "—",
-    "≥1.0 µm": "—",
-    "≥2.5 µm": "—",
-    "≥5.0 µm": "—",
-    "≥10 µm": "—",
 }
 _lock = threading.Lock()
 
@@ -105,12 +99,6 @@ def _poll_sensors() -> None:
                 data["PM1"] = f"{s['pm1']} µg/m³"
                 data["PM2.5"] = f"{s['pm25']} µg/m³"
                 data["PM10"] = f"{s['pm10']} µg/m³"
-                data["≥0.3 µm"] = str(s['n0_3'])
-                data["≥0.5 µm"] = str(s['n0_5'])
-                data["≥1.0 µm"] = str(s['n1_0'])
-                data["≥2.5 µm"] = str(s['n2_5'])
-                data["≥5.0 µm"] = str(s['n5_0'])
-                data["≥10 µm"] = str(s['n10_0'])
             except Exception:
                 pass
 

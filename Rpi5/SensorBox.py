@@ -5,7 +5,7 @@ import time
 from smbus2 import SMBus, i2c_msg
 
 # =======================
-#   Paramètres I²C
+#   I²C Parameters
 # =======================
 I2C_BUS    = 0
 SGP30_ADDR = 0x58
@@ -13,7 +13,7 @@ AHT20_ADDR = 0x38
 BMP280_ADDR = 0x77
 
 # =======================
-#   Utilitaires SGP30
+#   SGP30 Utilities
 # =======================
 def _crc8(data: bytes) -> int:
     crc = 0xFF
@@ -35,7 +35,7 @@ def _rx_words(bus, n_words: int) -> list[int]:
     for i in range(0, len(raw), 3):
         hi, lo, crc = raw[i], raw[i+1], raw[i+2]
         if _crc8(bytes([hi, lo])) != crc:
-            raise IOError("CRC invalide (SGP30)")
+            raise IOError("Invalid CRC (SGP30)")
         out.append((hi << 8) | lo)
     return out
 
@@ -79,7 +79,7 @@ class BMP280:
         self.addr = addr
         chip_id = self._read_u8(0xD0)
         if chip_id not in (0x58, 0x60):
-            raise IOError(f"BMP/BME280 non détecté (ID=0x{chip_id:02X}) à 0x{addr:02X}")
+            raise IOError(f"BMP/BME280 not detected (ID=0x{chip_id:02X}) at 0x{addr:02X}")
         self._write_u8(0xE0, 0xB6)
         time.sleep(0.005)
         self.dig_T1 = self._read_u16le(0x88)
@@ -136,13 +136,13 @@ class BMP280:
 # =======================
 #   PMS5003 (PM)
 # =======================
-# Pins demandés (BCM): RESET=2, SET=3, TXD=14, RXD=15
-# Nécessite: pyserial + gpiozero (souvent préinstallé sur Raspberry Pi OS)
+# Required pins (BCM): RESET=2, SET=3, TXD=14, RXD=15
+# Requires: pyserial + gpiozero (often preinstalled on Raspberry Pi OS)
 import serial
 try:
     from gpiozero import DigitalOutputDevice
 except Exception:
-    DigitalOutputDevice = None  # on gèrera sans contrôle GPIO
+    DigitalOutputDevice = None  # handle without GPIO control
 
 class PMS5003:
     def __init__(self, port="/dev/serial0", baud=9600, pin_set=3, pin_reset=2):
@@ -155,7 +155,7 @@ class PMS5003:
             self.reset  = DigitalOutputDevice(pin_reset, active_high=True, initial_value=True)
             self.wake()
             self.reset_pulse()
-        # vider le buffer
+    # clear the buffer
         try:
             self.ser.reset_input_buffer()
         except Exception:
@@ -188,7 +188,7 @@ class PMS5003:
                 continue
             if b2[0] != 0x4D:
                 continue
-            rest = s.read(30)  # total 32 bytes, déjà lu 2
+            rest = s.read(30)  # total 32 bytes, already read 2
             if len(rest) != 30:
                 continue
             frame = bytes([0x42, 0x4D]) + rest
@@ -198,19 +198,19 @@ class PMS5003:
             if chk != calc:
                 continue
             return frame
-        raise TimeoutError("PMS5003: timeout lecture frame")
+        raise TimeoutError("PMS5003: frame read timeout")
 
     def read(self):
         f = self._read_frame()
-        length = (f[2] << 8) | f[3]    # attendu 28
-        # Champs utiles (µg/m3)
+        length = (f[2] << 8) | f[3]    # expected 28
+        # Relevant fields (µg/m3)
         pm1_cf1   = (f[4] << 8) | f[5]
         pm25_cf1  = (f[6] << 8) | f[7]
         pm10_cf1  = (f[8] << 8) | f[9]
         pm1_atm   = (f[10] << 8) | f[11]
         pm25_atm  = (f[12] << 8) | f[13]
         pm10_atm  = (f[14] << 8) | f[15]
-        # counts (nombre de particules / 0.1L d'air)
+        # counts (number of particles / 0.1L of air)
         n03 = (f[16] << 8) | f[17]
         n05 = (f[18] << 8) | f[19]
         n10 = (f[20] << 8) | f[21]
@@ -225,28 +225,28 @@ class PMS5003:
         }
 
 # =======================
-#   Programme principal
+#   Main program
 # =======================
 def main():
     with SMBus(I2C_BUS) as bus:
         time.sleep(0.1)
 
-        # ----- SGP30 : checks + init -----
+        # ----- SGP30: checks + init -----
         feat = _read_words(bus, 0x202F, 1)[0]
         print(f"SGP30 Feature set : 0x{feat:04X}")
         serial = _read_words(bus, 0x3682, 3)
         print(f"SGP30 Serial      : {serial[0]:04X}-{serial[1]:04X}-{serial[2]:04X}")
         _tx_cmd(bus, 0x2003)  # init IAQ
         time.sleep(0.05)
-        print("SGP30 IAQ init OK. Les ~15 premières mesures servent de rodage…")
+        print("SGP30 IAQ init OK. The first ~15 measurements serve as burn-in…")
 
         # ----- AHT20 -----
         try:
             aht20_init(bus)
             t_aht, rh = aht20_read(bus)
-            print(f"AHT20 prêt. T={t_aht:.2f}°C  RH={rh:.1f}%")
+            print(f"AHT20 ready. T={t_aht:.2f}°C  RH={rh:.1f}%")
         except Exception as e:
-            print(f"AHT20 init/lecture : {e}")
+            print(f"AHT20 init/read: {e}")
             t_aht, rh = None, None
 
         # ----- BMP280 -----
@@ -255,21 +255,21 @@ def main():
             bmp = BMP280(bus, BMP280_ADDR)
             t_bmp, p_pa = bmp.read()
             p_hpa = p_pa / 100.0 if p_pa is not None else None
-            print(f"BMP280 prêt.  T={t_bmp:.2f}°C  P={p_hpa:.2f} hPa" if p_hpa is not None else
-                  f"BMP280 prêt.  T={t_bmp:.2f}°C  P=—")
+            print(f"BMP280 ready.  T={t_bmp:.2f}°C  P={p_hpa:.2f} hPa" if p_hpa is not None else
+                  f"BMP280 ready.  T={t_bmp:.2f}°C  P=—")
         except Exception as e:
-            print(f"BMP280 init/lecture : {e}")
+            print(f"BMP280 init/read: {e}")
 
         # ----- PMS5003 -----
         pms = None
         try:
             pms = PMS5003(port="/dev/ttyAMA0", baud=9600, pin_set=3, pin_reset=2, timeout=3.0)
             sample = pms.read()
-            print(f"PMS5003 prêt. PM1={sample['pm1']} PM2.5={sample['pm25']} PM10={sample['pm10']} µg/m³")
+            print(f"PMS5003 ready. PM1={sample['pm1']} PM2.5={sample['pm25']} PM10={sample['pm10']} µg/m³")
         except Exception as e:
-            print(f"PMS5003 init/lecture : {e}")
+            print(f"PMS5003 init/read: {e}")
 
-        # ----- Boucle mesures -----
+        # ----- Measurement loop -----
         t0 = time.time()
         while True:
             # SGP30
@@ -299,7 +299,7 @@ def main():
                 except Exception:
                     pass
 
-            # Temp agrégée
+            # Aggregated temperature
             temp_c = t_bmp if t_bmp is not None else t_aht
 
             uptime = time.time() - t0
@@ -316,4 +316,4 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\nArrêt.")
+        print("\nStopped.")

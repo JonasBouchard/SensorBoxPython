@@ -254,8 +254,8 @@ def main():
         try:
             bmp = BMP280(bus, BMP280_ADDR)
             t_bmp, p_pa = bmp.read()
-            p_hpa = p_pa / 100.0 if p_pa is not None else None
-            print(f"BMP280 ready.  T={t_bmp:.2f}°C  P={p_hpa:.2f} hPa" if p_hpa is not None else
+            p_kpa = p_pa / 1000.0 if p_pa is not None else None
+            print(f"BMP280 ready.  T={t_bmp:.2f}°C  P={p_kpa:.2f} kPa" if p_kpa is not None else
                   f"BMP280 ready.  T={t_bmp:.2f}°C  P=—")
         except Exception as e:
             print(f"BMP280 init/read: {e}")
@@ -306,7 +306,7 @@ def main():
             line = [f"[{uptime:6.1f}s] eCO2={eco2:4d} ppm | TVOC={tvoc:4d} ppb"]
             if temp_c is not None: line.append(f"T={temp_c:.2f}°C")
             if rh is not None:     line.append(f"RH={rh:.1f}%")
-            if p_pa is not None:   line.append(f"P={p_pa/100.0:.2f} hPa")
+            if p_pa is not None:   line.append(f"P={p_pa/1000.0:.2f} kPa")
             if pm25 is not None:   line.append(f"PM1={pm1} PM2.5={pm25} PM10={pm10} µg/m³")
             print(" | ".join(line))
 

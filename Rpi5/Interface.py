@@ -102,7 +102,7 @@ class Interface(tk.Tk):
         if rh is not None:
             self.labels["RH"].config(text=f"RH: {rh:.1f}%")
         if p_pa is not None:
-            self.labels["Pressure"].config(text=f"Pressure: {p_pa/100:.1f} hPa")
+            self.labels["Pressure"].config(text=f"Pressure: {p_pa/1000:.1f} kPa")
 
         # Particulate matter from PMS5003
         pm1 = pm25 = pm10 = None

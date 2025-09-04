@@ -10,6 +10,7 @@ overview of the environment without relying on the command line.
 
 import time
 import tkinter as tk
+import sys
 from smbus2 import SMBus
 
 # Reuse sensor utilities and classes from the existing SensorBox module
@@ -133,5 +134,13 @@ class Interface(tk.Tk):
 
 
 if __name__ == "__main__":
-    app = Interface()
-    app.mainloop()
+    try:
+        app = Interface()
+        app.mainloop()
+    except tk.TclError as err:
+        print(
+            "Error: Unable to start Tkinter. Ensure a graphical display is attached "
+            "or X11 forwarding is enabled."
+        )
+        print(f"TclError: {err}")
+        sys.exit(1)

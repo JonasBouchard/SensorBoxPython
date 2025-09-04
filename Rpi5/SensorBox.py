@@ -231,20 +231,14 @@ def main():
     with SMBus(I2C_BUS) as bus:
         time.sleep(0.1)
 
-        # ----- SGP30: checks + init -----
-        feat = _read_words(bus, 0x202F, 1)[0]
-        print(f"SGP30 Feature set : 0x{feat:04X}")
-        serial = _read_words(bus, 0x3682, 3)
-        print(f"SGP30 Serial      : {serial[0]:04X}-{serial[1]:04X}-{serial[2]:04X}")
+        # ----- SGP30 -----
         _tx_cmd(bus, 0x2003)  # init IAQ
         time.sleep(0.05)
-        print("SGP30 IAQ init OK. The first ~15 measurements serve as burn-in…")
 
         # ----- AHT20 -----
         try:
             aht20_init(bus)
             t_aht, rh = aht20_read(bus)
-            print(f"AHT20 ready. T={t_aht:.2f}°C  RH={rh:.1f}%")
         except Exception as e:
             print(f"AHT20 init/read: {e}")
             t_aht, rh = None, None
@@ -255,8 +249,6 @@ def main():
             bmp = BMP280(bus, BMP280_ADDR)
             t_bmp, p_pa = bmp.read()
             p_kpa = p_pa / 1000.0 if p_pa is not None else None
-            print(f"BMP280 ready.  T={t_bmp:.2f}°C  P={p_kpa:.2f} kPa" if p_kpa is not None else
-                  f"BMP280 ready.  T={t_bmp:.2f}°C  P=—")
         except Exception as e:
             print(f"BMP280 init/read: {e}")
 
@@ -265,7 +257,6 @@ def main():
         try:
             pms = PMS5003(port="/dev/ttyAMA0", baud=9600, pin_set=3, pin_reset=2)
             sample = pms.read()
-            print(f"PMS5003 ready. PM1={sample['pm1']} PM2.5={sample['pm25']} PM10={sample['pm10']} µg/m³")
         except Exception as e:
             print(f"PMS5003 init/read: {e}")
 

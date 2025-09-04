@@ -133,18 +133,71 @@ def get_latest() -> dict[str, str]:
         return dict(latest)
 
 
-# Simple template. The meta refresh tag reloads the page every 5 seconds.
 TEMPLATE = """
 <!doctype html>
-<title>SensorBox</title>
-<meta http-equiv="refresh" content="5">
-<h1>SensorBox readings</h1>
-<ul>
-{% for key, val in data.items() %}
-  <li><strong>{{ key }}:</strong> {{ val }}</li>
-{% endfor %}
-</ul>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>SensorBox</title>
+  <meta http-equiv="refresh" content="5">
+  <style>
+    body {
+      background: linear-gradient(135deg, #2c3e50, #3498db);
+      color: #ecf0f1;
+      font-family: "Segoe UI", Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+    h1 {
+      margin-top: 30px;
+      font-size: 2.5em;
+      color: #f1c40f;
+      text-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+    }
+    ul {
+      list-style-type: none;
+      padding: 0;
+      margin-top: 40px;
+    }
+    li {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      margin: 15px auto;
+      padding: 15px 20px;
+      width: 60%;
+      font-size: 1.3em;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      transition: transform 0.2s;
+    }
+    li:hover {
+      transform: scale(1.05);
+      background: rgba(255, 255, 255, 0.2);
+    }
+    .sensor-name {
+      color: white;
+    }
+    .danger {
+      color: #e74c3c;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>SensorBox</h1>
+  <ul>
+    {% for key, val in data.items() %}
+      <li>
+        <span class="sensor-name">{{ key }}:</span>
+        <span class="{% if 'DANGER' in val %}danger{% endif %}">{{ val }}</span>
+      </li>
+    {% endfor %}
+  </ul>
+</body>
+</html>
 """
+
+
 
 
 @app.route("/")
@@ -159,7 +212,7 @@ def data():
 
 if __name__ == "__main__":
     try:
-        app.run(host="0.0.0.0", port=8000)
+        app.run(host="0.0.0.0", port=8888)
     finally:
         try:
             bus.close()

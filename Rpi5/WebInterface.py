@@ -10,6 +10,7 @@ A JSON representation is also available at ``/data``.
 from __future__ import annotations
 
 import time
+import threading
 from flask import Flask, render_template_string, jsonify
 from smbus2 import SMBus
 
@@ -47,51 +48,85 @@ except Exception:  # sensor not present
     pms = None
 
 
-def read_sensors() -> dict[str, str]:
-    """Poll available sensors and return a mapping of readings."""
-    data: dict[str, str] = {}
+latest: dict[str, str] = {
+    "eCO2": "—",
+    "TVOC": "—",
+    "Temp": "—",
+    "RH": "—",
+    "Pressure": "—",
+    "PM1": "—",
+    "PM2.5": "—",
+    "PM10": "—",
+    "≥0.3 µm": "—",
+    "≥0.5 µm": "—",
+    "≥1.0 µm": "—",
+    "≥2.5 µm": "—",
+    "≥5.0 µm": "—",
+    "≥10 µm": "—",
+}
+_lock = threading.Lock()
 
-    # Gas sensor
-    try:
-        eco2, tvoc = _read_words(bus, 0x2008, 2, delay_s=0.05)
-        data["eCO2"] = f"{eco2} ppm"
-        data["TVOC"] = f"{tvoc} ppb"
-    except Exception:
-        pass
 
-    # Temperature & humidity from AHT20
-    try:
-        t_aht, rh = aht20_read(bus)
-    except Exception:
-        t_aht, rh = None, None
+def _poll_sensors() -> None:
+    """Background thread periodically polling sensors."""
+    while True:
+        data: dict[str, str] = {}
 
-    # Temperature & pressure from BMP280
-    t_bmp = p_pa = None
-    if bmp:
         try:
-            t_bmp, p_pa = bmp.read()
+            eco2, tvoc = _read_words(bus, 0x2008, 2, delay_s=0.05)
+            data["eCO2"] = f"{eco2} ppm"
+            data["TVOC"] = f"{tvoc} ppb"
         except Exception:
             pass
 
-    temp_c = t_bmp if t_bmp is not None else t_aht
-    if temp_c is not None:
-        data["Temp"] = f"{temp_c:.1f} °C"
-    if rh is not None:
-        data["RH"] = f"{rh:.1f}%"
-    if p_pa is not None:
-        data["Pressure"] = f"{p_pa/1000:.1f} kPa"
-
-    # Particulate matter from PMS5003
-    if pms:
         try:
-            s = pms.read()
-            data["PM1"] = f"{s['pm1']} µg/m³"
-            data["PM2.5"] = f"{s['pm25']} µg/m³"
-            data["PM10"] = f"{s['pm10']} µg/m³"
+            t_aht, rh = aht20_read(bus)
         except Exception:
-            pass
+            t_aht, rh = None, None
 
-    return data
+        t_bmp = p_pa = None
+        if bmp:
+            try:
+                t_bmp, p_pa = bmp.read()
+            except Exception:
+                pass
+
+        temp_c = t_bmp if t_bmp is not None else t_aht
+        if temp_c is not None:
+            data["Temp"] = f"{temp_c:.1f} °C"
+        if rh is not None:
+            data["RH"] = f"{rh:.1f}%"
+        if p_pa is not None:
+            data["Pressure"] = f"{p_pa/1000:.1f} kPa"
+
+        if pms:
+            try:
+                s = pms.read()
+                data["PM1"] = f"{s['pm1']} µg/m³"
+                data["PM2.5"] = f"{s['pm25']} µg/m³"
+                data["PM10"] = f"{s['pm10']} µg/m³"
+                data["≥0.3 µm"] = str(s['n0_3'])
+                data["≥0.5 µm"] = str(s['n0_5'])
+                data["≥1.0 µm"] = str(s['n1_0'])
+                data["≥2.5 µm"] = str(s['n2_5'])
+                data["≥5.0 µm"] = str(s['n5_0'])
+                data["≥10 µm"] = str(s['n10_0'])
+            except Exception:
+                pass
+
+        with _lock:
+            latest.update(data)
+
+        time.sleep(1.0)
+
+
+threading.Thread(target=_poll_sensors, daemon=True).start()
+
+
+def get_latest() -> dict[str, str]:
+    """Return a snapshot of the most recent sensor data."""
+    with _lock:
+        return dict(latest)
 
 
 # Simple template. The meta refresh tag reloads the page every 5 seconds.
@@ -110,13 +145,12 @@ TEMPLATE = """
 
 @app.route("/")
 def index():
-    data = read_sensors()
-    return render_template_string(TEMPLATE, data=data)
+    return render_template_string(TEMPLATE, data=get_latest())
 
 
 @app.route("/data")
 def data():
-    return jsonify(read_sensors())
+    return jsonify(get_latest())
 
 
 if __name__ == "__main__":

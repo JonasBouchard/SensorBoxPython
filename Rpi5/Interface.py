@@ -70,9 +70,9 @@ class Interface(tk.Tk):
         if temp_c is not None:
             self.labels["Temp"].config(text=f"Temp: {temp_c:.1f} °C")
         if rh is not None:
-            self.labels["RH"].config(text=f"RH: {rh:.1f}%")
+            self.labels["RH"].config(text=f"RH: {rh:.2f}%")
         if p_pa is not None:
-            self.labels["Pressure"].config(text=f"Pressure: {p_pa/1000:.1f} kPa")
+            self.labels["Pressure"].config(text=f"Pressure: {p_pa/1000:.2f} kPa")
         if pm1 is not None:
             self.labels["PM1"].config(text=f"PM1: {pm1} µg/m³")
         if pm25 is not None:

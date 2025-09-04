@@ -90,11 +90,11 @@ def _poll_sensors() -> None:
 
         temp_c = t_bmp if t_bmp is not None else t_aht
         if temp_c is not None:
-            data["Temp"] = f"{temp_c:.1f} °C"
+            data["Temp"] = f"{temp_c:.2f} °C"
         if rh is not None:
             data["RH"] = f"{rh:.1f}%"
         if p_pa is not None:
-            data["Pressure"] = f"{p_pa/1000:.1f} kPa"
+            data["Pressure"] = f"{p_pa/1000:.2f} kPa"
 
         if pms:
             try:

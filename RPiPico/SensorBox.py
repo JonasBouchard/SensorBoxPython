@@ -28,9 +28,9 @@ while True:
     print("Pressure :    " + str(pressure) + "kPa")
     print("CO2eq :       " + str(co2eq) + "ppm")
     print("total VOCs :  " + str(tvoc) + "ppb")
-    print("PM1.0 :       " + str(pms_data.pm_ug_per_m3(1.0)) + "ug/m3")
-    print("PM2.5 :       " + str(pms_data.pm_ug_per_m3(2.5)) + "ug/m3")
-    print("PM10 :        " + str(pms_data.pm_ug_per_m3(10)) + "ug/m3")
+    print("PM1.0 :       " + str(pms_data.pm_ug_per_m3(1.0, atmospheric_environment=True)) + "ug/m3")
+    print("PM2.5 :       " + str(pms_data.pm_ug_per_m3(2.5, atmospheric_environment=True)) + "ug/m3")
+    print("PM10 :        " + str(pms_data.pm_ug_per_m3(10, atmospheric_environment=True)) + "ug/m3")
 
     # Read data every 5 seconds
     time.sleep_ms(5000)

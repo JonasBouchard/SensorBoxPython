@@ -2,6 +2,10 @@
 # -*- coding: utf-8 -*-
 
 import time
+import subprocess
+import sys
+from pathlib import Path
+
 from smbus2 import SMBus, i2c_msg
 
 # =======================
@@ -228,80 +232,103 @@ class PMS5003:
 #   Main program
 # =======================
 def main():
-    with SMBus(I2C_BUS) as bus:
-        time.sleep(0.1)
-
-        # ----- SGP30 -----
-        _tx_cmd(bus, 0x2003)  # init IAQ
-        time.sleep(0.05)
-
-        # ----- AHT20 -----
+    script_dir = Path(__file__).resolve().parent
+    procs: list[subprocess.Popen] = []
+    try:
         try:
-            aht20_init(bus)
-            t_aht, rh = aht20_read(bus)
+            procs.append(
+                subprocess.Popen([sys.executable, str(script_dir / "WebInterface.py")])
+            )
         except Exception as e:
-            print(f"AHT20 init/read: {e}")
-            t_aht, rh = None, None
+            print(f"Web interface start failed: {e}")
 
-        # ----- BMP280 -----
-        bmp = None
         try:
-            bmp = BMP280(bus, BMP280_ADDR)
-            t_bmp, p_pa = bmp.read()
-            p_kpa = p_pa / 1000.0 if p_pa is not None else None
+            procs.append(
+                subprocess.Popen([sys.executable, str(script_dir / "Interface.py")])
+            )
         except Exception as e:
-            print(f"BMP280 init/read: {e}")
+            print(f"Screen interface start failed: {e}")
 
-        # ----- PMS5003 -----
-        pms = None
-        try:
-            pms = PMS5003(port="/dev/ttyAMA0", baud=9600, pin_set=3, pin_reset=2)
-            sample = pms.read()
-        except Exception as e:
-            print(f"PMS5003 init/read: {e}")
+        with SMBus(I2C_BUS) as bus:
+            time.sleep(0.1)
 
-        # ----- Measurement loop -----
-        t0 = time.time()
-        while True:
-            # SGP30
-            eco2, tvoc = _read_words(bus, 0x2008, 2, delay_s=0.05)  # eCO2 ppm, TVOC ppb
+            # ----- SGP30 -----
+            _tx_cmd(bus, 0x2003)  # init IAQ
+            time.sleep(0.05)
 
-            # AHT20
-            t_aht, rh = (None, None)
+            # ----- AHT20 -----
             try:
+                aht20_init(bus)
                 t_aht, rh = aht20_read(bus)
+            except Exception as e:
+                print(f"AHT20 init/read: {e}")
+                t_aht, rh = None, None
+
+            # ----- BMP280 -----
+            bmp = None
+            try:
+                bmp = BMP280(bus, BMP280_ADDR)
+                t_bmp, p_pa = bmp.read()
+                p_kpa = p_pa / 1000.0 if p_pa is not None else None
+            except Exception as e:
+                print(f"BMP280 init/read: {e}")
+
+            # ----- PMS5003 -----
+            pms = None
+            try:
+                pms = PMS5003(port="/dev/ttyAMA0", baud=9600, pin_set=3, pin_reset=2)
+                sample = pms.read()
+            except Exception as e:
+                print(f"PMS5003 init/read: {e}")
+
+            # ----- Measurement loop -----
+            t0 = time.time()
+            while True:
+                # SGP30
+                eco2, tvoc = _read_words(bus, 0x2008, 2, delay_s=0.05)  # eCO2 ppm, TVOC ppb
+
+                # AHT20
+                t_aht, rh = (None, None)
+                try:
+                    t_aht, rh = aht20_read(bus)
+                except Exception:
+                    pass
+
+                # BMP280
+                t_bmp, p_pa = (None, None)
+                if bmp:
+                    try:
+                        t_bmp, p_pa = bmp.read()
+                    except Exception:
+                        pass
+
+                # PMS5003
+                pm1 = pm25 = pm10 = None
+                if pms:
+                    try:
+                        s = pms.read()
+                        pm1, pm25, pm10 = s["pm1"], s["pm25"], s["pm10"]
+                    except Exception:
+                        pass
+
+                # Aggregated temperature
+                temp_c = t_bmp if t_bmp is not None else t_aht
+
+                uptime = time.time() - t0
+                line = [f"[{uptime:6.1f}s] eCO2={eco2:4d} ppm | TVOC={tvoc:4d} ppb"]
+                if temp_c is not None: line.append(f"T={temp_c:.2f}°C")
+                if rh is not None:     line.append(f"RH={rh:.1f}%")
+                if p_pa is not None:   line.append(f"P={p_pa/1000.0:.2f} kPa")
+                if pm25 is not None:   line.append(f"PM1={pm1} PM2.5={pm25} PM10={pm10} µg/m³")
+                print(" | ".join(line))
+
+                time.sleep(1.0)
+    finally:
+        for p in procs:
+            try:
+                p.terminate()
             except Exception:
                 pass
-
-            # BMP280
-            t_bmp, p_pa = (None, None)
-            if bmp:
-                try:
-                    t_bmp, p_pa = bmp.read()
-                except Exception:
-                    pass
-
-            # PMS5003
-            pm1 = pm25 = pm10 = None
-            if pms:
-                try:
-                    s = pms.read()
-                    pm1, pm25, pm10 = s["pm1"], s["pm25"], s["pm10"]
-                except Exception:
-                    pass
-
-            # Aggregated temperature
-            temp_c = t_bmp if t_bmp is not None else t_aht
-
-            uptime = time.time() - t0
-            line = [f"[{uptime:6.1f}s] eCO2={eco2:4d} ppm | TVOC={tvoc:4d} ppb"]
-            if temp_c is not None: line.append(f"T={temp_c:.2f}°C")
-            if rh is not None:     line.append(f"RH={rh:.1f}%")
-            if p_pa is not None:   line.append(f"P={p_pa/1000.0:.2f} kPa")
-            if pm25 is not None:   line.append(f"PM1={pm1} PM2.5={pm25} PM10={pm10} µg/m³")
-            print(" | ".join(line))
-
-            time.sleep(1.0)
 
 if __name__ == "__main__":
     try:

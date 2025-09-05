@@ -527,7 +527,7 @@
       "plot": "GerberFiles",
       "pos_files": "",
       "specctra_dsn": "",
-      "step": "",
+      "step": "SensorBoxPython.step",
       "svg": "",
       "vrml": ""
     },

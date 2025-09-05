@@ -155,44 +155,85 @@ TEMPLATE = """
       color: #f1c40f;
       text-shadow: 2px 2px 5px rgba(0,0,0,0.3);
     }
-    ul {
-      list-style-type: none;
-      padding: 0;
-      margin-top: 40px;
+    .box {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 15px;
+      padding: 20px;
+      margin: 30px auto;
+      width: 70%;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     }
+    ul { list-style: none; padding: 0; margin: 0; }
     li {
       background: rgba(255, 255, 255, 0.1);
       border-radius: 10px;
-      margin: 15px auto;
-      padding: 15px 20px;
-      width: 60%;
-      font-size: 1.3em;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      margin: 12px auto;
+      padding: 12px 18px;
+      font-size: 1.2em;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.2);
       transition: transform 0.2s;
+      width: 100%;
     }
-    li:hover {
-      transform: scale(1.05);
-      background: rgba(255, 255, 255, 0.2);
-    }
-    .sensor-name {
-      color: white;
-    }
-    .danger {
-      color: #e74c3c;
-      font-weight: bold;
-    }
+    li:hover { transform: scale(1.03); background: rgba(255, 255, 255, 0.2); }
+    .sensor-name { color: white; }
+    .danger { color: #e74c3c; font-weight: bold; }
   </style>
 </head>
 <body>
   <h1>SensorBox</h1>
-  <ul>
-    {% for key, val in data.items() %}
-      <li>
-        <span class="sensor-name">{{ key }}:</span>
-        <span class="{% if 'DANGER' in val %}danger{% endif %}">{{ val }}</span>
-      </li>
-    {% endfor %}
-  </ul>
+
+  <!-- Boîte 1 : mesures environnementales -->
+  <div class="box">
+    <ul>
+      {% for key, val in data.items() %}
+        {% set k = key|lower %}
+        {% set is_air_quality = (
+             'co2' in k
+          or 'tvoc' in k
+          or 'voc' in k
+          or 'aqi' in k
+          or 'pm' in k
+          or 'hcho' in k
+          or 'no2' in k
+          or 'o3'  in k
+          or 'so2' in k
+          or (k == 'co')
+        ) %}
+        {% if not is_air_quality %}
+          <li>
+            <span class="sensor-name">{{ key }}:</span>
+            <span class="{% if 'DANGER' in val %}danger{% endif %}">{{ val }}</span>
+          </li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+  </div>
+
+  <!-- Boîte 2 : mesures qualité de l'air -->
+  <div class="box">
+    <ul>
+      {% for key, val in data.items() %}
+        {% set k = key|lower %}
+        {% if
+             'co2' in k
+          or 'tvoc' in k
+          or 'voc' in k
+          or 'aqi' in k
+          or 'pm' in k
+          or 'hcho' in k
+          or 'no2' in k
+          or 'o3'  in k
+          or 'so2' in k
+          or (k == 'co')
+        %}
+          <li>
+            <span class="sensor-name">{{ key }}:</span>
+            <span class="{% if 'DANGER' in val %}danger{% endif %}">{{ val }}</span>
+          </li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+  </div>
 </body>
 </html>
 """

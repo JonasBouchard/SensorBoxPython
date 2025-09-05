@@ -10,12 +10,14 @@ import json
 from smbus2 import SMBus, i2c_msg
 
 # =======================
-#   I²C Parameters
+#      Parameters
 # =======================
 I2C_BUS    = 0
 SGP30_ADDR = 0x58
 AHT20_ADDR = 0x38
 BMP280_ADDR = 0x77
+PMS_SET_PIN = 3
+PMS_RST_PIN = 2
 
 # =======================
 #   SGP30 Utilities
@@ -141,7 +143,7 @@ class BMP280:
 # =======================
 #   PMS5003 (PM)
 # =======================
-# Required pins (BCM): RESET=2, SET=3, TXD=14, RXD=15
+# Required pins (BCM): TXD=14, RXD=15
 # Requires: pyserial + gpiozero (often preinstalled on Raspberry Pi OS)
 import serial
 try:
@@ -150,7 +152,7 @@ except Exception:
     DigitalOutputDevice = None  # handle without GPIO control
 
 class PMS5003:
-    def __init__(self, port="/dev/serial0", baud=9600, pin_set=3, pin_reset=2):
+    def __init__(self, port="/dev/serial0", baud=9600, pin_set=PMS_SET_PIN, pin_reset=PMS_RST_PIN):
         self.port = port
         self.ser = serial.Serial(port, baudrate=baud, timeout=1.0)
         self.enable = None

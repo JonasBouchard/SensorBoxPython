@@ -54,8 +54,8 @@ except Exception:  # sensor not present
 latest: dict[str, str] = {
     "eCO2": "—",
     "TVOC": "—",
-    "Temp": "—",
-    "RH": "—",
+    "Temperature": "—",
+    "Relative Humidity": "—",
     "Pressure": "—",
     "PM1": "—",
     "PM2.5": "—",

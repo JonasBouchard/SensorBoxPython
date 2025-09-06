@@ -65,7 +65,7 @@
         {% if not is_air_quality %}
           <li>
             <span class="sensor-name">{{ key }}:</span>
-            <span class="{% if 'DANGER' in val %}danger{% endif %}">{{ val }}</span>
+            <span class="{% if key in danger %}danger{% endif %}">{{ val }}</span>
           </li>
         {% endif %}
       {% endfor %}
@@ -91,7 +91,7 @@
         %}
           <li>
             <span class="sensor-name">{{ key }}:</span>
-            <span class="{% if 'DANGER' in val %}danger{% endif %}">{{ val }}</span>
+            <span class="{% if key in danger %}danger{% endif %}">{{ val }}</span>
           </li>
         {% endif %}
       {% endfor %}

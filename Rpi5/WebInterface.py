@@ -12,6 +12,7 @@ from __future__ import annotations
 import time
 import threading
 import json
+import re
 from pathlib import Path
 from flask import Flask, render_template, jsonify
 from smbus2 import SMBus
@@ -61,7 +62,28 @@ latest: dict[str, str] = {
     "PM2.5": "—",
     "PM10": "—",
 }
+danger_keys: set[str] = set()
 _lock = threading.Lock()
+
+THRESHOLDS = {
+    "eCO2": 1000,  # ppm
+    "TVOC": 500,  # ppb
+    "Temp": 30,  # °C
+    "RH": 60,  # %
+    "PM1": 35,  # µg/m³
+    "PM2.5": 25,  # µg/m³
+    "PM10": 50,  # µg/m³
+}
+
+
+def _apply_thresholds(data: dict[str, str]) -> set[str]:
+    triggered = set()
+    for key, limit in THRESHOLDS.items():
+        if key in data:
+            match = re.search(r"[-+]?\d*\.?\d+", data[key])
+            if match and float(match.group()) > limit:
+                triggered.add(key)
+    return triggered
 
 
 def _poll_sensors() -> None:
@@ -118,8 +140,12 @@ def _poll_sensors() -> None:
             except Exception:
                 pass
 
+        danger = _apply_thresholds(data)
+
         with _lock:
             latest.update(data)
+            danger_keys.clear()
+            danger_keys.update(danger)
 
         time.sleep(1.0)
 
@@ -127,22 +153,24 @@ def _poll_sensors() -> None:
 threading.Thread(target=_poll_sensors, daemon=True).start()
 
 
-def get_latest() -> dict[str, str]:
+def get_latest() -> tuple[dict[str, str], set[str]]:
     """Return a snapshot of the most recent sensor data."""
     with _lock:
-        return dict(latest)
+        return dict(latest), set(danger_keys)
 
 
 
 
 @app.route("/")
 def index():
-    return render_template("index.html", data=get_latest())
+    data, danger = get_latest()
+    return render_template("index.html", data=data, danger=danger)
 
 
 @app.route("/data")
 def data():
-    return jsonify(get_latest())
+    data, _ = get_latest()
+    return jsonify(data)
 
 
 if __name__ == "__main__":

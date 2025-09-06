@@ -67,8 +67,8 @@ _lock = threading.Lock()
 THRESHOLDS = {
     "eCO2": 1000,  # ppm
     "TVOC": 500,  # ppb
-    "Temp": 30,  # °C
-    "RH": 60,  # %
+    "Temperature": 30,  # °C
+    "Relative Humidity": 60,  # %
     "PM1": 35,  # µg/m³
     "PM2.5": 25,  # µg/m³
     "PM10": 50,  # µg/m³
@@ -109,9 +109,9 @@ def _poll_sensors() -> None:
 
         temp_c = t_bmp if t_bmp is not None else t_aht
         if temp_c is not None:
-            data["Temp"] = f"{temp_c:.2f} °C"
+            data["Temperature"] = f"{temp_c:.2f} °C"
         if rh is not None:
-            data["RH"] = f"{rh:.1f}%"
+            data["Relative Humidity"] = f"{rh:.1f}%"
         if p_pa is not None:
             data["Pressure"] = f"{p_pa/1000:.2f} kPa"
 

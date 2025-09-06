@@ -12,6 +12,7 @@ from __future__ import annotations
 import time
 import threading
 import json
+import re
 from pathlib import Path
 from flask import Flask, render_template, jsonify
 from smbus2 import SMBus
@@ -62,6 +63,24 @@ latest: dict[str, str] = {
     "PM10": "—",
 }
 _lock = threading.Lock()
+
+THRESHOLDS = {
+    "eCO2": 1000,  # ppm
+    "TVOC": 500,  # ppb
+    "Temp": 30,  # °C
+    "RH": 60,  # %
+    "PM1": 35,  # µg/m³
+    "PM2.5": 25,  # µg/m³
+    "PM10": 50,  # µg/m³
+}
+
+
+def _apply_thresholds(data: dict[str, str]) -> None:
+    for key, limit in THRESHOLDS.items():
+        if key in data:
+            match = re.search(r"[-+]?\d*\.?\d+", data[key])
+            if match and float(match.group()) > limit:
+                data[key] += " DANGER"
 
 
 def _poll_sensors() -> None:
@@ -117,6 +136,8 @@ def _poll_sensors() -> None:
                     data["PM10"] = f"{d['PM10']} µg/m³"
             except Exception:
                 pass
+
+        _apply_thresholds(data)
 
         with _lock:
             latest.update(data)

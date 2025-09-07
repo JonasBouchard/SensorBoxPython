@@ -45,57 +45,54 @@
 <body>
   <h1>SensorBox</h1>
 
+  {% set ns = namespace(env=[], air=[]) %}
+  {% for key, val in data.items() %}
+    {% set k = key|lower %}
+    {% set is_air_quality = (
+         'co2' in k
+      or 'tvoc' in k
+      or 'voc' in k
+      or 'aqi' in k
+      or 'pm' in k
+      or 'hcho' in k
+      or 'no2' in k
+      or 'o3'  in k
+      or 'so2' in k
+      or (k == 'co')
+    ) %}
+    {% if is_air_quality %}
+      {% set ns.air = ns.air + [(key, val)] %}
+    {% else %}
+      {% set ns.env = ns.env + [(key, val)] %}
+    {% endif %}
+  {% endfor %}
+
   <!-- Boîte 1 : mesures environnementales -->
+  {% if ns.env %}
   <div class="box">
     <ul>
-      {% for key, val in data.items() %}
-        {% set k = key|lower %}
-        {% set is_air_quality = (
-             'co2' in k
-          or 'tvoc' in k
-          or 'voc' in k
-          or 'aqi' in k
-          or 'pm' in k
-          or 'hcho' in k
-          or 'no2' in k
-          or 'o3'  in k
-          or 'so2' in k
-          or (k == 'co')
-        ) %}
-        {% if not is_air_quality %}
-          <li>
-            <span class="sensor-name">{{ key }}:</span>
-            <span class="{% if 'DANGER' in val %}danger{% endif %}">{{ val | replace(' DANGER', '') | trim }}</span>
-          </li>
-        {% endif %}
+      {% for key, val in ns.env %}
+        <li>
+          <span class="sensor-name">{{ key }}:</span>
+          <span class="{% if 'DANGER' in val %}danger{% endif %}">{{ val | replace(' DANGER', '') | trim }}</span>
+        </li>
       {% endfor %}
     </ul>
   </div>
+  {% endif %}
 
   <!-- Boîte 2 : mesures qualité de l'air -->
+  {% if ns.air %}
   <div class="box">
     <ul>
-      {% for key, val in data.items() %}
-        {% set k = key|lower %}
-        {% if
-             'co2' in k
-          or 'tvoc' in k
-          or 'voc' in k
-          or 'aqi' in k
-          or 'pm' in k
-          or 'hcho' in k
-          or 'no2' in k
-          or 'o3'  in k
-          or 'so2' in k
-          or (k == 'co')
-        %}
-          <li>
-            <span class="sensor-name">{{ key }}:</span>
-            <span class="{% if 'DANGER' in val %}danger{% endif %}">{{ val | replace(' DANGER', '') | trim }}</span>
-          </li>
-        {% endif %}
+      {% for key, val in ns.air %}
+        <li>
+          <span class="sensor-name">{{ key }}:</span>
+          <span class="{% if 'DANGER' in val %}danger{% endif %}">{{ val | replace(' DANGER', '') | trim }}</span>
+        </li>
       {% endfor %}
     </ul>
   </div>
+  {% endif %}
 </body>
 </html>

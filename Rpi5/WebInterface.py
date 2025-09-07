@@ -11,7 +11,9 @@ from __future__ import annotations
 
 import time
 import threading
+import json
 import re
+from pathlib import Path
 from flask import Flask, render_template, jsonify
 from smbus2 import SMBus
 
@@ -26,6 +28,7 @@ from SensorBox import (
 )
 
 app = Flask(__name__)
+DATA_FILE = Path(__file__).resolve().parent / "latest.json"
 
 # ------------------------ Sensor initialisation -------------------------
 bus = SMBus(I2C_BUS)
@@ -49,7 +52,16 @@ except Exception:  # sensor not present
     pms = None
 
 
-latest: dict[str, str] = {}
+latest: dict[str, str] = {
+    "eCO2": "—",
+    "TVOC": "—",
+    "Temperature": "—",
+    "Relative Humidity": "—",
+    "Pressure": "—",
+    "PM1": "—",
+    "PM2.5": "—",
+    "PM10": "—",
+}
 _lock = threading.Lock()
 
 THRESHOLDS = {
@@ -111,11 +123,23 @@ def _poll_sensors() -> None:
                 data["PM10"] = f"{s['pm10']} µg/m³"
             except Exception:
                 pass
+        else:
+            # Fallback: read particulate data written by SensorBox.py
+            try:
+                with DATA_FILE.open(encoding="utf-8") as fh:
+                    d = json.load(fh)
+                if "PM1" in d:
+                    data["PM1"] = f"{d['PM1']} µg/m³"
+                if "PM2.5" in d:
+                    data["PM2.5"] = f"{d['PM2.5']} µg/m³"
+                if "PM10" in d:
+                    data["PM10"] = f"{d['PM10']} µg/m³"
+            except Exception:
+                pass
 
         _apply_thresholds(data)
 
         with _lock:
-            latest.clear()
             latest.update(data)
 
         time.sleep(1.0)
